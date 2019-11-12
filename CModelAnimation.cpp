@@ -2,7 +2,7 @@
 #include "main.h"
 #include "renderer.h"
 #include "texture.h"
-#include "model.h"
+#include "CModel.h"
 #include <string>
 #include <vector>
 

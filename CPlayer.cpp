@@ -10,7 +10,7 @@
 #include "CColSphere.h"
 #include "CBullet.h"
 #include "camera.h"
-#include "model.h"
+#include "CModel.h"
 #include "CModelAnimation.h"
 #include "CShadow.h"
 #include "Field.h"

@@ -3,7 +3,7 @@
 #include "manager.h"
 #include "Scene.h"
 #include "GameObject.h"
-#include "model.h"
+#include "CModel.h"
 
 #include "CShadow.h"
 #include "CCollision.h"

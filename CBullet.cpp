@@ -6,7 +6,7 @@
 #include "CCollision.h"
 #include "CColSphere.h"
 #include "CPlayer.h"
-#include "model.h"
+#include "CModel.h"
 #include "CBullet.h"
 
 

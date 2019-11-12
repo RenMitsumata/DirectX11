@@ -1,42 +1,38 @@
 #pragma once
 
+#include <map>
+#include <unordered_map>
 
-
-// マテリアル構造体
-struct MODEL_MATERIAL
-{
-	char						Name[256];
-	MATERIAL					Material;
-	char						TextureName[256];
-};
-
-// 描画サブセット構造体
-struct SUBSET
-{
-	unsigned short	StartIndex;
-	unsigned short	IndexNum;
-	MODEL_MATERIAL	Material;
-};
-
-// モデル構造体
-struct MODEL
-{
-	VERTEX_3D		*VertexArray;
-	unsigned short	VertexNum;
-	unsigned short	*IndexArray;
-	unsigned short	IndexNum;
-	SUBSET			*SubsetArray;
-	unsigned short	SubsetNum;
-};
+#include <assimp\vector3.h>
+#include <assimp\quaternion.h>
+#include <assimp\matrix4x4.h>
 
 
 
-//　前方宣言
+// 前方宣言
 struct aiNode;
+struct aiScene;
 struct aiFace;
 struct aiMesh;
-class CTexture;
 
+struct DEFORM_VERTEX {
+	aiVector3D position;
+	aiVector3D deformPosition;
+	aiVector3D normal;
+	aiVector3D deformNormal;
+	int boneNum;
+	// int boneIndex[4];	←早いほう
+	std::string boneName[4];
+	float boneWeight[4];
+
+};
+
+struct BONE {
+	// std::string name;
+	aiMatrix4x4 matrix;
+	aiMatrix4x4 animationMatrix;
+	aiMatrix4x4 offsetMatrix;
+};
 
 struct FACE {
 	aiFace* pFace;
@@ -51,45 +47,48 @@ struct MESH {
 	FACE*			pFaces;
 	unsigned short baseIndexNum;
 };
-
-
-
-class CModel
+class Model : public Component
 {
+
+
+
 private:
 
-	XMFLOAT3					m_Position;
-	XMFLOAT3					m_Rotation;
-	XMFLOAT3					m_Scale;
+	// 共通（アニメーション有無）
+	ID3D11Buffer* vertexBuffer = NULL;
+	ID3D11Buffer* indexBuffer = NULL;
+	DX11_SUBSET* m_SubsetArray = NULL;
+	const aiScene* pScene;
+	// const aiScene** pScenes;
+	std::vector<DEFORM_VERTEX>* pDeformVertexs;
+	std::unordered_map<std::string, BONE> Bones;
 
-	ID3D11Buffer*	m_VertexBuffer = NULL;
-	ID3D11Buffer*	m_IndexBuffer = NULL;
+	// アニメーション時使用
+	std::map<std::string, aiQuaternion> m_NodeRotation;	// 各ノードの回転を保存
+	std::map<std::string, aiVector3D> m_NodePosition;	// 各ノードの位置を保存
 
-	DX11_SUBSET*	m_SubsetArray = NULL;
+	// 不明
 	unsigned short	m_SubsetNum;
-	void LoadObj( const char *FileName, MODEL *Model );
-	void LoadMaterial( const char *FileName, MODEL_MATERIAL **MaterialArray, unsigned short *MaterialNum );
-	
+
+
+	MESH* meshes;
+	CTexture** pTextureArray;
+	unsigned int animCnt;
+	//void DrawChild(aiNode* pNode);
 public:
 	void Init();
-	void Init(const char * filename);
-	void Init(const char * filename,XMFLOAT3 pos);
-	void Uninit();
 	void Update();
-	void Update(XMFLOAT3 deltaPos);
+	void Uninit();
+	void CreateBone(aiNode * pNode);
+	void UpdateBoneMatrix(aiNode * pNode, aiMatrix4x4* pMatrix);
 	void Draw();
-	void Draw(unsigned int mgtNum, XMFLOAT3 rootPos);
-	void Draw(unsigned int mgtNum, XMFLOAT3 rootPos, XMFLOAT3 yawpitchroll);
-	void Draw(unsigned int mgtNum, XMFLOAT3 rootPos, XMFLOAT3 yawpitchroll, float canonAngle, float canonUpAngle);
-
-	void DrawChild(aiNode * pCurrentNode, float canonAngle, float canonUpAngle);
-	
-	void Draw(XMFLOAT3 m_Position);
-	void Load( const char *FileName );
-	void SetScale(XMFLOAT3 scale);
-	void Unload();
-	enum e_FILETYPE {
-		e_FILEOBJ = 0,
-		e_FILEFBX
-	};
+	void Draw(XMMATRIX matrix, float canonAngle, float canonUpAngle);
+	void DrawChild(aiNode * pNode, float canonAngle, float canonUpAngle, XMMATRIX matrix);
+	//void Draw(XMMATRIX matrix);
+	void Load(const char* filename);
+	void UnLoad();
+	void Update(int Frame);
+	//void Update(int Animation,int Frame);
+	Model();
+	virtual ~Model();
 };

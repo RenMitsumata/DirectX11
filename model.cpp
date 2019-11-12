@@ -1,91 +1,315 @@
 #define NOMINMAX
 #include "main.h"
 #include "renderer.h"
-
 #include "texture.h"
-
-
-#include <Windows.h>
+#include "Component.h"
+#include "GameObject.h"
+#include <string>
 #include <vector>
 #include <assimp\cimport.h>
 #include <assimp\scene.h>
 #include <assimp\postprocess.h>
-#include <assimp\matrix4x4.h>
 #pragma comment (lib,"assimp.lib")
 
-#include "model.h"
-// 複数化するときは、↓を配列化する
-const aiScene* g_pScene = nullptr;
-unsigned int* g_Texture = nullptr;
-bool key;
-static int Cnt = 0;
-std::vector<XMMATRIX> _MatList;
-std::vector<ID3D11Buffer*> _Buflist;
-ID3D11Buffer*  i_VertexBuffer;
-ID3D11Buffer*  i_IndexBuffer;
+#include "Component.h"
 
-//void MakeBuffer(aiNode* pNode);
+#include "Model.h"
 
 
-MESH* meshes;
 
-void CModel::Init()
+Model::Model()
 {
-	m_Position = XMFLOAT3( 0.0f, 1.0f, 0.0f );
-	m_Rotation = XMFLOAT3( 0.0f, 0.0f, 0.0f );
-	m_Scale = XMFLOAT3( 1.0f, 1.0f, 1.0f );
-
-
-	Load( "asset/miku_01.obj" );
-		
 }
-/*
-void MakeBuffer(aiNode* pNode) {
-	for (int i = 0; i < pNode->mNumMeshes; i++) {
-		for (int j = 0; j < g_pScene->mMeshes[pNode->mMeshes[i]]->mNumFaces; j++) {
-			
+
+
+Model::~Model()
+{
+}
+
+void Model::Init()
+{
+	//Load("assets/models/ball.fbx");
+
+}
+
+void Model::Update()
+{
+}
+
+void Model::Uninit()
+{
+	UnLoad();
+}
+
+void Model::CreateBone(aiNode * pNode)
+{
+	BONE bone;
+	Bones[pNode->mName.C_Str()] = bone;	// ノードの名前をボーン検索名にする = ボーン名
+	for (int i = 0; i < pNode->mNumChildren; i++) {
+		CreateBone(pNode->mChildren[i]);
+	}
+}
+
+void Model::UpdateBoneMatrix(aiNode * pNode, aiMatrix4x4* pMatrix)
+{
+	BONE* pBone = &Bones[pNode->mName.C_Str()];
+	aiMatrix4x4 worldMatrix;
+	worldMatrix = *pMatrix;
+	worldMatrix *= pBone->animationMatrix;
+	pBone->matrix = worldMatrix;
+	pBone->matrix *= pBone->offsetMatrix;
+	for (int n = 0; n < pNode->mNumChildren; n++) {
+		UpdateBoneMatrix(pNode->mChildren[n], &worldMatrix);
+	}
+}
+
+void Model::Draw()
+{
+	// 頂点バッファ設定
+	CRenderer::SetVertexBuffers(vertexBuffer);
+	// インデックスバッファ設定
+	CRenderer::SetIndexBuffer(indexBuffer);
+
+
+	aiNode* pCurrentNode = pScene->mRootNode; // 今のシーンは？
+
+	XMMATRIX matrix = XMMatrixIdentity();
+	/*
+	if (owner) {
+		XMFLOAT3 pos = owner->GetTransform()->position;
+		XMFLOAT3 ownerPosition = transform->position;
+		matrix = XMMatrixTranslation(ownerPosition.x, ownerPosition.y, ownerPosition.z);
+		matrix = XMMatrixTranspose(matrix);
+	}
+	*/
+
+	DrawChild(pCurrentNode, 0.0f, 0.0f, matrix);
+}
+
+void Model::Draw(XMMATRIX matrix, float canonAngle, float canonUpAngle)
+{
+
+	//CRenderer::SetWorldMatrix(&matrix);
+
+	// 頂点バッファ設定
+	CRenderer::SetVertexBuffers(vertexBuffer);
+	// インデックスバッファ設定
+	CRenderer::SetIndexBuffer(indexBuffer);
+
+
+	aiNode* pCurrentNode = pScene->mRootNode; // 今のシーンは？
+
+	DrawChild(pCurrentNode, canonAngle, canonUpAngle, matrix);
+
+
+
+}
+
+void Model::DrawChild(aiNode * pNode, float canonAngle, float canonUpAngle, XMMATRIX matrix)
+{
+	XMMATRIX local = XMMatrixIdentity();
+
+	if (!pScene->HasAnimations()) {
+
+
+
+		// まずはローカル座標を求めて、スタックに押し込む
+		aiMatrix4x4 localMat = pNode->mTransformation;
+		aiTransposeMatrix4(&localMat);
+		XMMATRIX pushMatrix = XMMatrixSet(localMat.a1, localMat.a2, localMat.a3, localMat.a4,
+			localMat.b1, localMat.b2, localMat.b3, localMat.b4,
+			localMat.c1, localMat.c2, localMat.c3, localMat.c4,
+			localMat.d1, localMat.d2, localMat.d3, localMat.d4
+		);
+
+		local = local * pushMatrix * matrix;
+
+		CRenderer::SetWorldMatrix(&local);
+
+		// まず、自分を描画する
+		for (int m = 0; m < pNode->mNumMeshes; m++) {
+			// マテリアル設定
+			CRenderer::SetMaterial(m_SubsetArray[pNode->mMeshes[m]].Material.Material);
+
+
+			// ポリゴン描画
+			CRenderer::DrawIndexed(m_SubsetArray[pNode->mMeshes[m]].IndexNum, m_SubsetArray[pNode->mMeshes[m]].StartIndex, meshes[pNode->mMeshes[m]].baseIndexNum);
+
+		}
+		// その後、子供がいれば子供を描画する
+		for (int i = 0; i < pNode->mNumChildren; i++) {
+
+			DrawChild(pNode->mChildren[i], canonAngle, canonUpAngle, local);
+
 		}
 	}
 
+	// アニメーションあり
+	else {
 
-}
-*/
 
-// intの管理番号をreturnする
-void CModel::Init(const char* filename) {
-	
-	m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_Rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
-	g_pScene = aiImportFile(filename, aiProcessPreset_TargetRealtime_Quality);
-	if (g_pScene == nullptr) {
-		MessageBox(NULL, "モデルファイルが読み込めません", "Assimp", MB_OK | MB_ICONHAND);
-		exit(1);
+		/*
+		// まずはローカル座標を求めて、スタックに押し込む
+		aiMatrix4x4 localMat = pNode->mTransformation;
+		aiTransposeMatrix4(&localMat);
+		XMMATRIX pushMatrix = XMMatrixSet(localMat.a1, localMat.a2, localMat.a3, localMat.a4,
+			localMat.b1, localMat.b2, localMat.b3, localMat.b4,
+			localMat.c1, localMat.c2, localMat.c3, localMat.c4,
+			localMat.d1, localMat.d2, localMat.d3, localMat.d4
+		);
+		*/
+
+		XMMATRIX world;
+
+		aiQuaternion aiQuat = m_NodeRotation[pNode->mName.C_Str()];
+		XMVECTOR auat = XMLoadFloat4(&XMFLOAT4(aiQuat.x, aiQuat.y, aiQuat.z, aiQuat.w));
+		world = XMMatrixRotationQuaternion(auat);
+
+		aiVector3D aiVector = m_NodePosition[pNode->mName.C_Str()];
+		//XMVECTOR  pos = XMLoadFloat3(&XMFLOAT3(aiVector.x, aiVector.y, aiVector.z));
+		//world *= XMMatrixTranslationFromVector(pos);
+		XMFLOAT3 pos = XMFLOAT3(aiVector.x, aiVector.y, aiVector.z);
+
+		world *= XMMatrixTranslation(pos.x, pos.y, pos.z);
+
+
+
+		world *= matrix;
+
+
+		CRenderer::SetWorldMatrix(&world);
+
+		// まず、自分を描画する
+		for (int m = 0; m < pNode->mNumMeshes; m++) {
+			// マテリアル設定
+			CRenderer::SetMaterial(m_SubsetArray[pNode->mMeshes[m]].Material.Material);
+
+			// テクスチャ設定
+			CRenderer::SetTexture(m_SubsetArray[pNode->mMeshes[m]].Material.Texture);
+
+			// ポリゴン描画
+			CRenderer::DrawIndexed(m_SubsetArray[pNode->mMeshes[m]].IndexNum, m_SubsetArray[pNode->mMeshes[m]].StartIndex, meshes[pNode->mMeshes[m]].baseIndexNum);
+
+		}
+
+		for (int i = 0; i < pNode->mNumChildren; i++) {
+			DrawChild(pNode->mChildren[i], canonAngle, canonUpAngle, world);
+		}
+
 	}
 
-	//aiNode* node = g_pScene->mRootNode;
+}
 
-	//MakeBuffer(node);
+void Model::Load(const char * filename)
+{
+
+	animCnt = 0;
+	pScene = aiImportFile(filename, aiProcessPreset_TargetRealtime_Quality);
+	if (pScene == nullptr) {
+		char filestring[256];
+		lstrcpy(filestring, filename);
+		char exp[32] = { "が読み込めません" };
+		lstrcat(filestring, exp);
+		MessageBox(NULL, filestring, "Assimp", MB_OK | MB_ICONHAND);
+	}
+
+	CreateBone(pScene->mRootNode);
+	pDeformVertexs = new std::vector<DEFORM_VERTEX>[pScene->mNumMeshes];
+	for (auto m = 0; m < pScene->mNumMeshes; m++) {
+		aiMesh* pMesh = pScene->mMeshes[m];
+		for (auto v = 0; v < pMesh->mNumVertices; v++) {
+			DEFORM_VERTEX defVertex;
+			defVertex.position = pMesh->mVertices[v];
+			defVertex.deformPosition = pMesh->mVertices[v];
+			defVertex.normal = pMesh->mNormals[v];
+			defVertex.deformNormal = pMesh->mNormals[v];
+			defVertex.boneNum = 0;
+			for (auto b = 0; b < 4; b++) {
+				// defVertex.boneIndex = 0;
+				defVertex.boneName[b] = {};
+				defVertex.boneWeight[b] = 0.0f;
+			}
+			pDeformVertexs[m].push_back(defVertex);
+		}
+		for (auto b = 0; b < pMesh->mNumBones; b++) {
+			aiBone* pBone = pMesh->mBones[b];
+			Bones[pBone->mName.C_Str()].offsetMatrix = pBone->mOffsetMatrix;
+			for (auto w = 0; w < pBone->mNumWeights; w++) {
+				aiVertexWeight weight = pBone->mWeights[w];
+				pDeformVertexs[m][weight.mVertexId].boneWeight[pDeformVertexs[m][weight.mVertexId].boneNum] = weight.mWeight;
+				pDeformVertexs[m][weight.mVertexId].boneName[pDeformVertexs[m][weight.mVertexId].boneNum] = pBone->mName.C_Str();
+				pDeformVertexs[m][weight.mVertexId].boneNum++;
+				if (pDeformVertexs[m][weight.mVertexId].boneNum > 4) {
+					MessageBox(nullptr, "このモデルデータは正しく表示されない可能性があります", "警告", MB_OK);
+				}
+			}
+		}
+
+	}
+
+
 
 
 
 	// 頂点バッファ、インデックスバッファの単一化のためのカウンタ
 	unsigned int indexCnt = 0;
-
-
-
-	meshes = new MESH[g_pScene->mNumMeshes];
+	unsigned int vertexCount = 0;
+	meshes = new MESH[pScene->mNumMeshes];
 
 	std::vector<VERTEX_3D> _VertexList;
 	std::vector<unsigned short> _IndexList;
 
-	m_SubsetArray = new DX11_SUBSET[g_pScene->mNumMeshes];
-	for (int i = 0; i < g_pScene->mNumMeshes; i++) {
-		meshes[i].pMesh = g_pScene->mMeshes[i];
-		
+
+	m_SubsetArray = new DX11_SUBSET[pScene->mNumMeshes];
+
+
+
+	// 画像ファイルの読み込み
+	pTextureArray = new CTexture*[pScene->mNumMaterials];
+	for (int p = 0; p < pScene->mNumMaterials; p++) {
+		aiString path;
+
+		if (pScene->mMaterials[p]->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS) {
+			// マテリアルに画像がある
+			// 画像は内部ファイル？外部ファイル？
+			if (path.data[0] == '*') {
+				/*
+				// FBX内部に画像ファイルがある（バージョンによって異なるので注意）
+
+				int id = atoi(&path.data[1]);
+				TextureSamba = LoadTextureFromMemory((const unsigned char*)g_pScene->mTextures[id]->pcData, g_pScene->mTextures[id]->mWidth);
+				*/
+			}
+			else {
+				std::string texPath = path.data;
+				size_t pos = texPath.find_last_of("\\/");
+				std::string headerPath = texPath.substr(0, pos + 1);
+				headerPath += path.data;
+				texPath.c_str();	// stringの先頭アドレスを取得できる
+				pTextureArray[p]->Load(headerPath.c_str());
+			}
+		}
+	}
+
+
+
+
+
+
+
+
+	for (int i = 0; i < pScene->mNumMeshes; i++) {
+		// テクスチャの読み込み
+		if (pScene->mTextures == '\0') {
+			int a = 0;
+		}
+
+
+		meshes[i].pMesh = pScene->mMeshes[i];
+
 		// マテリアルの設定
-		const aiMaterial* mat = g_pScene->mMaterials[meshes[i].pMesh->mMaterialIndex];
-		
+		const aiMaterial* mat = pScene->mMaterials[meshes[i].pMesh->mMaterialIndex];
+
 		aiColor4D bufColor;
 
 		aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &bufColor);
@@ -108,18 +332,13 @@ void CModel::Init(const char* filename) {
 		m_SubsetArray[i].Material.Material.Emission.g = bufColor.g;
 		m_SubsetArray[i].Material.Material.Emission.b = bufColor.b;
 		m_SubsetArray[i].Material.Material.Emission.a = bufColor.a;
-		
 
+
+		meshes[i].baseIndexNum = vertexCount;
 
 		// 本来ならここにmaterialのtexture関係を描く
-		
-	//	meshes[i].pTexture = new CTexture();
-
-
-
-
-
-
+		//meshes[i].pTexture = new CTexture();
+		//pScene->mMeshes[pNode->mMeshes[0]]->mVertices;
 		VERTEX_3D vertex;
 		for (int n = 0; n < meshes[i].pMesh->mNumVertices; n++) {
 			vertex.Position.x = meshes[i].pMesh->mVertices[n].x;
@@ -135,11 +354,22 @@ void CModel::Init(const char* filename) {
 			vertex.TexCoord.x = 0.0f;
 			vertex.TexCoord.y = 0.0f;
 			_VertexList.push_back(vertex);
+			vertexCount++;
 		}
 
-		// インデックスの開始位置を求める
+		// インデックスバッファを作る
 		meshes[i].pFaces = new FACE[meshes[i].pMesh->mNumFaces];
+		unsigned int indexNum = 0;
+		for (int in = 0; in < meshes[i].pMesh->mNumFaces; in++) {
+			meshes[i].pFaces[in].pFace = &meshes[i].pMesh->mFaces[in];
+			indexNum += meshes[i].pFaces[in].pFace->mNumIndices;
+		}
+
+
+		// インデックスの開始位置を求める
 		m_SubsetArray[i].StartIndex = indexCnt;
+
+
 
 		unsigned short indexIns;
 		int a = 0;
@@ -154,15 +384,23 @@ void CModel::Init(const char* filename) {
 
 		m_SubsetArray[i].IndexNum = a;
 
-		
-		
 	}
+
+
 
 	// 頂点バッファの作成
 	VERTEX_3D* vertexBuf = new VERTEX_3D[_VertexList.size()];
 	unsigned int num = 0;
 	for (VERTEX_3D oneVertex : _VertexList) {
 		vertexBuf[num] = oneVertex;
+		num++;
+	}
+
+	// インデックスバッファの作製
+	unsigned short* indexBuf = new unsigned short[_IndexList.size()];
+	num = 0;
+	for (unsigned short oneIndex : _IndexList) {
+		indexBuf[num] = oneIndex;
 		num++;
 	}
 
@@ -177,42 +415,36 @@ void CModel::Init(const char* filename) {
 	vbData.pSysMem = vertexBuf;
 	vbData.SysMemPitch = 0;
 	vbData.SysMemSlicePitch = 0;
-	CRenderer::GetDevice()->CreateBuffer(&vertexBufferDesc, &vbData, &m_VertexBuffer);
+	CRenderer::GetDevice()->CreateBuffer(&vertexBufferDesc, &vbData, &vertexBuffer);
 
 	delete vertexBuf;
 
-	// インデックスバッファの作成
-	unsigned short* indexBuf = new unsigned short[_IndexList.size()];
-	num = 0;
-	for (unsigned short oneIndex : _IndexList) {
-		indexBuf[num] = oneIndex;
-		num++;
-	}
 
 
-	D3D11_BUFFER_DESC indexBuffer;
-	indexBuffer.ByteWidth = sizeof(unsigned short) * _IndexList.size();
-	indexBuffer.Usage = D3D11_USAGE_DEFAULT;
-	indexBuffer.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	indexBuffer.CPUAccessFlags = 0;
-	indexBuffer.MiscFlags = 0;
-	indexBuffer.StructureByteStride = 0;
+
+	D3D11_BUFFER_DESC indexBufferDesc;
+	indexBufferDesc.ByteWidth = sizeof(unsigned short) * _IndexList.size();
+	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.MiscFlags = 0;
+	indexBufferDesc.StructureByteStride = 0;
 	D3D11_SUBRESOURCE_DATA ibData;
 	ibData.pSysMem = indexBuf;
 	ibData.SysMemPitch = 0;
 	ibData.SysMemSlicePitch = 0;
-	CRenderer::GetDevice()->CreateBuffer(&indexBuffer, &ibData, &m_IndexBuffer);
+	CRenderer::GetDevice()->CreateBuffer(&indexBufferDesc, &ibData, &indexBuffer);
 
 	delete indexBuf;
-	
+
 	// サブセット設定
 	{
-		
-		m_SubsetNum = g_pScene->mNumMeshes;
+
+		m_SubsetNum = pScene->mNumMeshes;
 
 		for (unsigned short i = 0; i < m_SubsetNum; i++)
 		{
-			m_SubsetArray[i].Material.Texture = new CTexture();
+			//m_SubsetArray[i].Material.Texture = new CTexture();
 			/*
 			if (m_SubsetArray[i].Material.Texture[0] != '\0') {
 				m_SubsetArray[i].Material.Texture->Load(model.SubsetArray[i].Material.TextureName);
@@ -220,707 +452,180 @@ void CModel::Init(const char* filename) {
 			*/
 		}
 	}
-	
-	
-	
+
+
+
+
 }
 
-void CModel::Init(const char * filename, XMFLOAT3 pos)
-{
-	m_Position = pos;
-	m_Rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
-
-
-	Load(filename);
-}
-
-
-void CModel::Uninit()
+void Model::UnLoad()
 {
 	delete[] meshes;
-	Unload();
-}
-
-
-void CModel::Update()
-{
-	
-}
-
-void CModel::Update(XMFLOAT3 deltaPos)
-{
-	m_Position.x += deltaPos.x;
-	m_Position.y += deltaPos.y;
-	m_Position.z += deltaPos.z;
-}
-
-void CModel::Draw()
-{
-
-	// マトリクス設定
-	
-	XMMATRIX world;
-	world = XMMatrixIdentity();
-	world *= XMMatrixScaling( m_Scale.x, m_Scale.y, m_Scale.z );
-	world *= XMMatrixRotationRollPitchYaw( m_Rotation.x, m_Rotation.y, m_Rotation.z );
-	world *= XMMatrixTranslation( m_Position.x, m_Position.y, m_Position.z );
-	CRenderer::SetWorldMatrix( &world );
-	
-	// 頂点バッファ設定
-	CRenderer::SetVertexBuffers( m_VertexBuffer );
-
-	// インデックスバッファ設定
-	CRenderer::SetIndexBuffer( m_IndexBuffer );
-
-	for( unsigned short i = 0; i < m_SubsetNum; i++ )
-	{
-		// マテリアル設定
-		CRenderer::SetMaterial( m_SubsetArray[i].Material.Material );
-
-		// テクスチャ設定
-		CRenderer::SetTexture( m_SubsetArray[i].Material.Texture );
-
-		// ポリゴン描画
-		CRenderer::DrawIndexed( m_SubsetArray[i].IndexNum, m_SubsetArray[i].StartIndex, 0 );
+	delete[] m_SubsetArray;
+	aiReleaseImport(pScene);
+	if (vertexBuffer) {
+		vertexBuffer->Release();
 	}
-	
-
-}
-
-// 回転、スケールも扱うなら、第２引数をtransform行列にして、rootMatrixとして登録する。
-void CModel::Draw(unsigned int mgtNum, XMFLOAT3 rootPos) {
-	// まず、rootnodeのtransform行列をプッシュする(openGL風)
-
-	XMMATRIX rootMatrix = XMMatrixIdentity();	
-	rootMatrix *= XMMatrixRotationY(AI_MATH_PI);
-	rootMatrix *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
-	rootMatrix *= XMMatrixTranslation(rootPos.x, rootPos.y, rootPos.z);
-	
-	CRenderer::SetWorldMatrix(&rootMatrix);
-	_MatList.push_back(rootMatrix);
-	CRenderer::SetDepthEnable(true);
-	
-	aiNode* pCurrentNode = g_pScene->mRootNode; // 今のシーンは？
-	
-	DrawChild(pCurrentNode,0.0f,0.0f);
-	_MatList.pop_back();
-	Cnt = 0;
-	CRenderer::SetDepthEnable(false);
-}
-
-// 回転、スケールも扱うなら、第２引数をtransform行列にして、rootMatrixとして登録する。
-void CModel::Draw(unsigned int mgtNum, XMFLOAT3 rootPos, XMFLOAT3 yawpitchroll) {
-	// まず、rootnodeのtransform行列をプッシュする(openGL風)
-
-	XMMATRIX rootMatrix = XMMatrixIdentity();
-	rootMatrix *= XMMatrixRotationRollPitchYaw(yawpitchroll.x, yawpitchroll.y + AI_MATH_PI, yawpitchroll.z);
-	rootMatrix *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
-	rootMatrix *= XMMatrixTranslation(rootPos.x, rootPos.y, rootPos.z);
-
-	CRenderer::SetWorldMatrix(&rootMatrix);
-	_MatList.push_back(rootMatrix);
-	CRenderer::SetDepthEnable(true);
-
-	aiNode* pCurrentNode = g_pScene->mRootNode; // 今のシーンは？
-
-	DrawChild(pCurrentNode,0.0f,0.0f);
-	_MatList.pop_back();
-	Cnt = 0;
-	CRenderer::SetDepthEnable(false);
-}
-
-void CModel::Draw(unsigned int mgtNum, XMFLOAT3 rootPos, XMFLOAT3 yawpitchroll, float canonAngle, float canonUpAngle) {
-	// まず、rootnodeのtransform行列をプッシュする(openGL風)
-
-	XMMATRIX rootMatrix = XMMatrixIdentity();
-	rootMatrix *= XMMatrixRotationRollPitchYaw(yawpitchroll.x, yawpitchroll.y, yawpitchroll.z);
-	rootMatrix *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
-	rootMatrix *= XMMatrixTranslation(rootPos.x, rootPos.y, rootPos.z);
-
-	CRenderer::SetWorldMatrix(&rootMatrix);
-	_MatList.push_back(rootMatrix);
-	CRenderer::SetDepthEnable(true);
-
-	// 頂点バッファ設定
-	CRenderer::SetVertexBuffers(m_VertexBuffer);
-	// インデックスバッファ設定
-	CRenderer::SetIndexBuffer(m_IndexBuffer);
-
-	aiNode* pCurrentNode = g_pScene->mRootNode; // 今のシーンは？
-
-	DrawChild(pCurrentNode,canonAngle,canonUpAngle);
-	_MatList.pop_back();
-	Cnt = 0;
-	//CRenderer::SetDepthEnable(false);
-}
-
-void CModel::DrawChild(aiNode* pCurrentNode, float canonAngle, float canonUpAngle) {
-
-	if (strcmp(pCurrentNode->mName.data, "Body") == 0) {
-		XMMATRIX bodyRotate;
-		bodyRotate = XMMatrixIdentity();
-		bodyRotate *= XMMatrixRotationY(AI_MATH_PI);
-		_MatList.push_back(bodyRotate);
-
-	}
-
-	
-
-	
-
-	// まずはローカル座標を求めて、スタックに押し込む
-	aiMatrix4x4 localMat = pCurrentNode->mTransformation;
-	aiTransposeMatrix4(&localMat);
-	XMMATRIX pushMatrix = XMMatrixSet(localMat.a1, localMat.a2, localMat.a3, localMat.a4,
-		localMat.b1, localMat.b2, localMat.b3, localMat.b4,
-		localMat.c1, localMat.c2, localMat.c3, localMat.c4,
-		localMat.d1, localMat.d2, localMat.d3, localMat.d4
-		);
-	_MatList.push_back(pushMatrix);
-
-
-	if (strcmp(pCurrentNode->mName.data, "Canon") == 0) {
-
-		XMMATRIX bodyRotate;
-		bodyRotate = XMMatrixIdentity();
-		bodyRotate *= XMMatrixRotationZ(canonAngle);
-		_MatList.push_back(bodyRotate);
-
-
-	}
-
-	if (strcmp(pCurrentNode->mName.data, "CanonBody") == 0) {
-
-		XMMATRIX bodyRotate;
-		bodyRotate = XMMatrixIdentity();
-		bodyRotate *= XMMatrixRotationX(canonUpAngle);
-		_MatList.push_back(bodyRotate);
-
-
-	}
-	
-
-	XMMATRIX worldMatrix = XMMatrixIdentity();
-	for (XMMATRIX matrix : _MatList) {
-		worldMatrix = matrix * worldMatrix;
-	}
-	CRenderer::SetWorldMatrix(&worldMatrix);
-
-	// まず、自分を描画する
-	for (int m = 0; m < pCurrentNode->mNumMeshes; m++) {
-		// マテリアル設定
-		
-		CRenderer::SetMaterial(m_SubsetArray[pCurrentNode->mMeshes[m]].Material.Material);
-		
-		// テクスチャ設定
-		//CRenderer::SetTexture(meshes[pCurrentNode->mMeshes[m]].pTexture);
-
-		// ポリゴン描画
-		CRenderer::DrawIndexed(m_SubsetArray[pCurrentNode->mMeshes[m]].IndexNum, m_SubsetArray[pCurrentNode->mMeshes[m]].StartIndex,0);
-				
-
-	}
-
-	// その後、子供がいれば子供を描画する
-	for (int i = 0; i < pCurrentNode->mNumChildren; i++) {
-		DrawChild(pCurrentNode->mChildren[i],canonAngle,canonUpAngle);
-	}
-
-	if (strcmp(pCurrentNode->mName.data, "CanonBody") == 0) {
-
-		_MatList.pop_back();
-
-	}
-	if (strcmp(pCurrentNode->mName.data, "Canon") == 0) {
-
-		_MatList.pop_back();
-
-	}
-
-	if (strcmp(pCurrentNode->mName.data, "Body") == 0) {
-		
-		_MatList.pop_back();
-
-	}
-
-	// 終わったら、行列をポップする
-	_MatList.pop_back();
-}
-
-
-
-
-void CModel::Draw(XMFLOAT3 m_Position)
-{
-	// マトリクス設定
-	XMMATRIX world;
-	world = XMMatrixIdentity();
-	world *= XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
-	world *= XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
-	world *= XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
-	CRenderer::SetWorldMatrix(&world);
-
-	// 頂点バッファ設定
-	CRenderer::SetVertexBuffers(m_VertexBuffer);
-
-	// インデックスバッファ設定
-	CRenderer::SetIndexBuffer(m_IndexBuffer);
-
-	for (unsigned short i = 0; i < m_SubsetNum; i++)
-	{
-		// マテリアル設定
-		CRenderer::SetMaterial(m_SubsetArray[i].Material.Material);
-
-		// テクスチャ設定
-		CRenderer::SetTexture(m_SubsetArray[i].Material.Texture);
-
-		// ポリゴン描画
-		CRenderer::DrawIndexed(m_SubsetArray[i].IndexNum, m_SubsetArray[i].StartIndex, 0);
+	if (indexBuffer) {
+		indexBuffer->Release();
 	}
 }
 
-void CModel::Load( const char *FileName )
-{
-
-	MODEL model;
-	LoadObj( FileName, &model );
+void Model::Update(int Frame) {
 
 
 
-	// 頂点バッファ生成
-	{
-		D3D11_BUFFER_DESC bd;
-		ZeroMemory( &bd, sizeof(bd) );
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof( VERTEX_3D ) * model.VertexNum;
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-
-		D3D11_SUBRESOURCE_DATA sd;
-		ZeroMemory( &sd, sizeof(sd) );
-		sd.pSysMem = model.VertexArray;
-
-		CRenderer::GetDevice()->CreateBuffer( &bd, &sd, &m_VertexBuffer );
-	}
-
-
-	// インデックスバッファ生成
-	{
-		D3D11_BUFFER_DESC bd;
-		ZeroMemory( &bd, sizeof(bd) );
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof( unsigned short ) * model.IndexNum;
-		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-
-		D3D11_SUBRESOURCE_DATA sd;
-		ZeroMemory( &sd, sizeof(sd) );
-		sd.pSysMem = model.IndexArray;
-
-		CRenderer::GetDevice()->CreateBuffer( &bd, &sd, &m_IndexBuffer );
-	}
-
-	// サブセット設定
-	{
-		m_SubsetArray = new DX11_SUBSET[ model.SubsetNum ];
-		m_SubsetNum = model.SubsetNum;
-
-		for( unsigned short i = 0; i < model.SubsetNum; i++ )
-		{
-			m_SubsetArray[i].StartIndex = model.SubsetArray[i].StartIndex;
-			m_SubsetArray[i].IndexNum = model.SubsetArray[i].IndexNum;
-
-			m_SubsetArray[i].Material.Material = model.SubsetArray[i].Material.Material;
-			m_SubsetArray[i].Material.Texture = new CTexture();
-			if (model.SubsetArray[i].Material.TextureName[0] != '\0') {
-				m_SubsetArray[i].Material.Texture->Load(model.SubsetArray[i].Material.TextureName);
-			}
-			
-		}
-	}
-
-	delete[] model.VertexArray;
-	delete[] model.IndexArray;
-	delete[] model.SubsetArray;
-
-}
-
-void CModel::SetScale(XMFLOAT3 scale)
-{
-	m_Scale.x = scale.x;
-	m_Scale.y = scale.y;
-	m_Scale.z = scale.z;
-}
-
-void CModel::Unload()
-{
-	if (m_VertexBuffer) {
-		m_VertexBuffer->Release();
-	}
-	if (m_IndexBuffer) {
-		m_IndexBuffer->Release();
-	}
-	for (int i = 0; i < g_pScene->mNumMeshes; i++) {
-		/*
-		if (meshes[i].pTexture) {
-			delete meshes[i].pTexture;
+	// 0番目のアニメーションを取得
+	if (pScene->HasAnimations()) {
+		/*　複数のアニメーションを取得する場合
+		for(int i=0;i<g_pScene->mNumAnimations;i++){
+			aiAnimation* pAnimation = new aiAnimation[g_pScene->mNumAnimations];
+			pAnimation = g_pScene->mAnimations[i];
 		}
 		*/
-	}
-	delete[] meshes;
-
-	delete[] m_SubsetArray;
-
-}
-
-//モデル読込////////////////////////////////////////////
-void CModel::LoadObj( const char *FileName, MODEL *Model )
-{
-
-	XMFLOAT3	*positionArray;
-	XMFLOAT3	*normalArray;
-	XMFLOAT2	*texcoordArray;
-
-	unsigned short	positionNum = 0;
-	unsigned short	normalNum = 0;
-	unsigned short	texcoordNum = 0;
-	unsigned int	vertexNum = 0;
-	unsigned short	indexNum = 0;
-	unsigned short	in = 0;
-	unsigned short	subsetNum = 0;
-
-	MODEL_MATERIAL	*materialArray = nullptr;
-	unsigned short	materialNum = 0;
-
-	char str[256];
-	char *s;
-	char c;
-
-
-	FILE *file;
-	file = fopen( FileName, "rt" );
-	assert(file);
 
 
 
-	//要素数カウント
-	while( true )
-	{
-		fscanf( file, "%s", str );
 
-		if( feof( file ) != 0 )
-			break;
+		// 0番のアニメーションを取得
+		aiAnimation* pAnimation = pScene->mAnimations[0];
+		for (auto c = 0; c < pAnimation->mNumChannels; c++) {
 
-		if( strcmp( str, "v" ) == 0 )
-		{
-			positionNum++;
+			aiNodeAnim* pNodeAnim = pAnimation->mChannels[c];
+
+			int f = Frame % pNodeAnim->mNumRotationKeys;
+
+			int s = Frame % pNodeAnim->mNumPositionKeys;
+
+			m_NodeRotation[pNodeAnim->mNodeName.C_Str()] = pNodeAnim->mRotationKeys[f].mValue;
+
+			m_NodePosition[pNodeAnim->mNodeName.C_Str()] = pNodeAnim->mPositionKeys[s].mValue;
+
 		}
-		else if( strcmp( str, "vn" ) == 0 )
-		{
-			normalNum++;
-		}
-		else if( strcmp( str, "vt" ) == 0 )
-		{
-			texcoordNum++;
-		}
-		else if( strcmp( str, "usemtl" ) == 0 )
-		{
-			subsetNum++;
-		}
-		else if( strcmp( str, "f" ) == 0 )
-		{
-			in = 0;
 
-			do
+
+		/*
+
+		// 各頂点の座標変換（本来はシェーダがやるべき）
+		for (unsigned int m = 0; m < pScene->mNumMeshes; m++)
+		{
+			for (auto& vertex : pDeformVertexs[m])
 			{
-				fscanf( file, "%s", str );
-				vertexNum++;
-				in++;
-				c = fgetc( file );
-			}
-			while( c != '\n' && c!= '\r' );
+				aiMatrix4x4 matrix[4];
+				aiMatrix4x4 outMatrix;
+				matrix[0] = Bones[vertex.boneName[0]].matrix;
+				matrix[1] = Bones[vertex.boneName[1]].matrix;
+				matrix[2] = Bones[vertex.boneName[2]].matrix;
+				matrix[3] = Bones[vertex.boneName[3]].matrix;
 
-			//四角は三角に分割
-			if( in == 4 )
-				in = 6;
-
-			indexNum += in;
-		}
-	}
-
-
-	//メモリ確保
-	positionArray = new XMFLOAT3[ positionNum ];
-	normalArray = new XMFLOAT3[ normalNum ];
-	texcoordArray = new XMFLOAT2[ texcoordNum ];
-
-
-	Model->VertexArray = new VERTEX_3D[ vertexNum ];
-	Model->VertexNum = vertexNum;
-
-	Model->IndexArray = new unsigned short[ indexNum ];
-	Model->IndexNum = indexNum;
-
-	Model->SubsetArray = new SUBSET[ subsetNum ];
-	Model->SubsetNum = subsetNum;
-
-
-
-
-	//要素読込
-	XMFLOAT3 *position = positionArray;
-	XMFLOAT3 *normal = normalArray;
-	XMFLOAT2 *texcoord = texcoordArray;
-
-	unsigned short vc = 0;
-	unsigned short ic = 0;
-	unsigned short sc = 0;
-
-
-	fseek( file, 0, SEEK_SET );
-
-	while( true )
-	{
-		fscanf( file, "%s", str );
-
-		if( feof( file ) != 0 )
-			break;
-
-		if( strcmp( str, "mtllib" ) == 0 )
-		{
-			//マテリアルファイル
-			fscanf( file, "%s", str );
-
-			char path[256];
-			strcpy( path, "asset/" );
-			strcat( path, str );
-
-			LoadMaterial( path, &materialArray, &materialNum );
-		}
-		else if( strcmp( str, "o" ) == 0 )
-		{
-			//オブジェクト名
-			fscanf( file, "%s", str );
-		}
-		else if( strcmp( str, "v" ) == 0 )
-		{
-			//頂点座標
-			fscanf( file, "%f", &position->x );
-			fscanf( file, "%f", &position->y );
-			fscanf( file, "%f", &position->z );
-			//position->x *= SCALE_MODEL;
-			//position->y *= SCALE_MODEL;
-			//position->z *= SCALE_MODEL;
-			position++;
-		}
-		else if( strcmp( str, "vn" ) == 0 )
-		{
-			//法線
-			fscanf( file, "%f", &normal->x );
-			fscanf( file, "%f", &normal->y );
-			fscanf( file, "%f", &normal->z );
-			normal++;
-		}
-		else if( strcmp( str, "vt" ) == 0 )
-		{
-			//テクスチャ座標
-			fscanf( file, "%f", &texcoord->x );
-			fscanf( file, "%f", &texcoord->y );
-			//texcoord->y = 1.0f - texcoord->y;
-			texcoord++;
-		}
-		else if( strcmp( str, "usemtl" ) == 0 )
-		{
-			//マテリアル
-			fscanf( file, "%s", str );
-
-			if( sc != 0 )
-				Model->SubsetArray[ sc - 1 ].IndexNum = ic - Model->SubsetArray[ sc - 1 ].StartIndex;
-
-			Model->SubsetArray[ sc ].StartIndex = ic;
-
-
-			for( unsigned short i = 0; i < materialNum; i++ )
-			{
-				if( strcmp( str, materialArray[i].Name ) == 0 )
+				//ウェイトを考慮してマトリクス算出
 				{
-					Model->SubsetArray[ sc ].Material.Material = materialArray[i].Material;
-					strcpy( Model->SubsetArray[ sc ].Material.TextureName, materialArray[i].TextureName );
-					strcpy( Model->SubsetArray[ sc ].Material.Name, materialArray[i].Name );
+					outMatrix.a1 = matrix[0].a1 * vertex.boneWeight[0]
+						+ matrix[1].a1 * vertex.boneWeight[1]
+						+ matrix[2].a1 * vertex.boneWeight[2]
+						+ matrix[3].a1 * vertex.boneWeight[3];
 
-					break;
+					outMatrix.a2 = matrix[0].a2 * vertex.boneWeight[0]
+						+ matrix[1].a2 * vertex.boneWeight[1]
+						+ matrix[2].a2 * vertex.boneWeight[2]
+						+ matrix[3].a2 * vertex.boneWeight[3];
+
+					outMatrix.a3 = matrix[0].a3 * vertex.boneWeight[0]
+						+ matrix[1].a3 * vertex.boneWeight[1]
+						+ matrix[2].a3 * vertex.boneWeight[2]
+						+ matrix[3].a3 * vertex.boneWeight[3];
+
+					outMatrix.a4 = matrix[0].a4 * vertex.boneWeight[0]
+						+ matrix[1].a4 * vertex.boneWeight[1]
+						+ matrix[2].a4 * vertex.boneWeight[2]
+						+ matrix[3].a4 * vertex.boneWeight[3];
+
+
+
+					outMatrix.b1 = matrix[0].b1 * vertex.boneWeight[0]
+						+ matrix[1].b1 * vertex.boneWeight[1]
+						+ matrix[2].b1 * vertex.boneWeight[2]
+						+ matrix[3].b1 * vertex.boneWeight[3];
+
+					outMatrix.b2 = matrix[0].b2 * vertex.boneWeight[0]
+						+ matrix[1].b2 * vertex.boneWeight[1]
+						+ matrix[2].b2 * vertex.boneWeight[2]
+						+ matrix[3].b2 * vertex.boneWeight[3];
+
+					outMatrix.b3 = matrix[0].b3 * vertex.boneWeight[0]
+						+ matrix[1].b3 * vertex.boneWeight[1]
+						+ matrix[2].b3 * vertex.boneWeight[2]
+						+ matrix[3].b3 * vertex.boneWeight[3];
+
+					outMatrix.b4 = matrix[0].b4 * vertex.boneWeight[0]
+						+ matrix[1].b4 * vertex.boneWeight[1]
+						+ matrix[2].b4 * vertex.boneWeight[2]
+						+ matrix[3].b4 * vertex.boneWeight[3];
+
+
+
+					outMatrix.c1 = matrix[0].c1 * vertex.boneWeight[0]
+						+ matrix[1].c1 * vertex.boneWeight[1]
+						+ matrix[2].c1 * vertex.boneWeight[2]
+						+ matrix[3].c1 * vertex.boneWeight[3];
+
+					outMatrix.c2 = matrix[0].c2 * vertex.boneWeight[0]
+						+ matrix[1].c2 * vertex.boneWeight[1]
+						+ matrix[2].c2 * vertex.boneWeight[2]
+						+ matrix[3].c2 * vertex.boneWeight[3];
+
+					outMatrix.c3 = matrix[0].c3 * vertex.boneWeight[0]
+						+ matrix[1].c3 * vertex.boneWeight[1]
+						+ matrix[2].c3 * vertex.boneWeight[2]
+						+ matrix[3].c3 * vertex.boneWeight[3];
+
+					outMatrix.c4 = matrix[0].c4 * vertex.boneWeight[0]
+						+ matrix[1].c4 * vertex.boneWeight[1]
+						+ matrix[2].c4 * vertex.boneWeight[2]
+						+ matrix[3].c4 * vertex.boneWeight[3];
+
+
+
+					outMatrix.d1 = matrix[0].d1 * vertex.boneWeight[0]
+						+ matrix[1].d1 * vertex.boneWeight[1]
+						+ matrix[2].d1 * vertex.boneWeight[2]
+						+ matrix[3].d1 * vertex.boneWeight[3];
+
+					outMatrix.d2 = matrix[0].d2 * vertex.boneWeight[0]
+						+ matrix[1].d2 * vertex.boneWeight[1]
+						+ matrix[2].d2 * vertex.boneWeight[2]
+						+ matrix[3].d2 * vertex.boneWeight[3];
+
+					outMatrix.d3 = matrix[0].d3 * vertex.boneWeight[0]
+						+ matrix[1].d3 * vertex.boneWeight[1]
+						+ matrix[2].d3 * vertex.boneWeight[2]
+						+ matrix[3].d3 * vertex.boneWeight[3];
+
+					outMatrix.d4 = matrix[0].d4 * vertex.boneWeight[0]
+						+ matrix[1].d4 * vertex.boneWeight[1]
+						+ matrix[2].d4 * vertex.boneWeight[2]
+						+ matrix[3].d4 * vertex.boneWeight[3];
+
 				}
-			}
 
-			sc++;
-			
-		}
-		else if( strcmp( str, "f" ) == 0 )
-		{
-			//面
-			in = 0;
+				vertex.deformPosition = vertex.position;
+				vertex.deformPosition *= outMatrix;
 
-			do
-			{
-				fscanf( file, "%s", str );
 
-				s = strtok( str, "/" );	
-				Model->VertexArray[vc].Position = positionArray[ atoi( s ) - 1 ];
-				if( s[ strlen( s ) + 1 ] != '/' )
-				{
-					//テクスチャ座標が存在しない場合もある
-					s = strtok( NULL, "/" );
-					Model->VertexArray[vc].TexCoord = texcoordArray[ atoi( s ) - 1 ];
-				}
-				s = strtok( NULL, "/" );	
-				Model->VertexArray[vc].Normal = normalArray[ atoi( s ) - 1 ];
+				//法線変換用に移動成分を削除
+				outMatrix.a4 = 0.0f;
+				outMatrix.b4 = 0.0f;
+				outMatrix.c4 = 0.0f;
 
-				Model->VertexArray[vc].Diffuse = XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f );
-
-				Model->IndexArray[ic] = vc;
-				ic++;
-				vc++;
-
-				in++;
-				c = fgetc( file );
-			}
-			while( c != '\n' && c != '\r' );
-
-			//四角は三角に分割
-			if( in == 4 )
-			{
-				Model->IndexArray[ic] = vc - 4;
-				ic++;
-				Model->IndexArray[ic] = vc - 2;
-				ic++;
+				vertex.deformNormal = vertex.normal;
+				vertex.deformNormal *= outMatrix;
 			}
 		}
+
+		*/
+
+		// 再帰的にボーンデータを更新する
+		//UpdateBoneMatrix(pScene->mRootNode, &aiMatrix4x4());
+
 	}
-
-
-	if( sc != 0 )
-		Model->SubsetArray[ sc - 1 ].IndexNum = ic - Model->SubsetArray[ sc - 1 ].StartIndex;
-
-	fclose(file);
-
-
-
-	delete[] positionArray;
-	delete[] normalArray;
-	delete[] texcoordArray;
-	delete[] materialArray;
 }
-
-
-
-
-//マテリアル読み込み///////////////////////////////////////////////////////////////////
-void CModel::LoadMaterial( const char *FileName, MODEL_MATERIAL **MaterialArray, unsigned short *MaterialNum )
-{
-	char str[256];
-
-	FILE *file;
-	file = fopen( FileName, "rt" );
-	if( file == NULL )
-	{
-		assert(false);
-		return;
-	}
-
-	MODEL_MATERIAL *materialArray;
-	unsigned short materialNum = 0;
-
-	//要素数カウント
-	while( true )
-	{
-		fscanf( file, "%s", str );
-
-		if( feof( file ) != 0 )
-			break;
-
-
-		if( strcmp( str, "newmtl" ) == 0 )
-		{
-			materialNum++;
-		}
-	}
-
-
-	//メモリ確保
-	materialArray = new MODEL_MATERIAL[ materialNum ];
-
-
-	//要素読込
-	int mc = -1;
-
-	fseek( file, 0, SEEK_SET );
-
-	while( true )
-	{
-		fscanf( file, "%s", str );
-
-		if( feof( file ) != 0 )
-			break;
-
-
-		if( strcmp( str, "newmtl" ) == 0 )
-		{
-			//マテリアル名
-			mc++;
-			fscanf( file, "%s", materialArray[ mc ].Name );
-			strcpy( materialArray[ mc ].TextureName, "" );
-		}
-		else if( strcmp( str, "Ka" ) == 0 )
-		{
-			//アンビエント
-			fscanf( file, "%f", &materialArray[ mc ].Material.Ambient.r );
-			fscanf( file, "%f", &materialArray[ mc ].Material.Ambient.g );
-			fscanf( file, "%f", &materialArray[ mc ].Material.Ambient.b );
-			materialArray[ mc ].Material.Ambient.a = 1.0f;
-		}
-		else if( strcmp( str, "Kd" ) == 0 )
-		{
-			//ディフューズ
-			fscanf( file, "%f", &materialArray[ mc ].Material.Diffuse.r );
-			fscanf( file, "%f", &materialArray[ mc ].Material.Diffuse.g );
-			fscanf( file, "%f", &materialArray[ mc ].Material.Diffuse.b );
-			materialArray[ mc ].Material.Diffuse.a = 1.0f;
-		}
-		else if( strcmp( str, "Ks" ) == 0 )
-		{
-			//スペキュラ
-			fscanf( file, "%f", &materialArray[ mc ].Material.Specular.r );
-			fscanf( file, "%f", &materialArray[ mc ].Material.Specular.g );
-			fscanf( file, "%f", &materialArray[ mc ].Material.Specular.b );
-			materialArray[ mc ].Material.Specular.a = 1.0f;
-		}
-		else if( strcmp( str, "Ns" ) == 0 )
-		{
-			//スペキュラ強度
-			fscanf( file, "%f", &materialArray[ mc ].Material.Shininess );
-		}
-		else if( strcmp( str, "d" ) == 0 )
-		{
-			//アルファ
-			fscanf( file, "%f", &materialArray[ mc ].Material.Diffuse.a );
-		}
-		else if( strcmp( str, "map_Kd" ) == 0 )
-		{
-			//テクスチャ
-			fscanf( file, "%s", str );
-
-			char path[256];
-			strcpy( path, "asset/" );
-			strcat( path, str );
-
-			strcat( materialArray[ mc ].TextureName, path );
-		}
-	}
-
-	fclose(file);
-	*MaterialArray = materialArray;
-	*MaterialNum = materialNum;
-}
-
-

@@ -29,6 +29,7 @@
     <ClCompile Include="CFade.cpp" />
     <ClCompile Include="CGame.cpp" />
     <ClCompile Include="CModelAnimation.cpp" />
+    <ClCompile Include="Component.cpp" />
     <ClCompile Include="Cource.cpp" />
     <ClCompile Include="CPlayer.cpp" />
     <ClCompile Include="CResult.cpp" />
@@ -40,7 +41,8 @@
     <ClCompile Include="input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="manager.cpp" />
-    <ClCompile Include="model.cpp" />
+    <ClCompile Include="CModel.cpp" />
+    <ClCompile Include="Model.cpp" />
     <ClCompile Include="polygon.cpp" />
     <ClCompile Include="renderer.cpp" />
     <ClCompile Include="SkyDome.cpp" />
@@ -57,6 +59,7 @@
     <ClInclude Include="CFade.h" />
     <ClInclude Include="CGame.h" />
     <ClInclude Include="CModelAnimation.h" />
+    <ClInclude Include="Component.h" />
     <ClInclude Include="Cource.h" />
     <ClInclude Include="CPlayer.h" />
     <ClInclude Include="CResult.h" />
@@ -68,7 +71,8 @@
     <ClInclude Include="input.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="manager.h" />
-    <ClInclude Include="model.h" />
+    <ClInclude Include="CModel.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="Scene.h" />
