@@ -1,0 +1,13 @@
+///////////////////////////////////
+//	Cource Editor É¿0.5			 //
+//	Ren Mitsumata				 //
+///////////////////////////////////
+Cource Length:
+2000
+
+100 Curve:100,100,1000
+300 CurveEnd:
+550 Curve:200,-200,0
+700 CurveEnd:
+1000 Curve:500,-100,0
+1300 CurveEnd:
