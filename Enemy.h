@@ -2,7 +2,7 @@
 class CModel;
 class CShadow;
 
-class CEnemy : public CGameObject
+class CEnemy : public GameObject
 {
 private:
 	CModel* m_Model = NULL;

@@ -1,7 +1,7 @@
 #pragma once
 
 // 子クラスの前方宣言
-class CGameObject;
+class GameObject;
 class CColSphere;
 class CColBox;
 
@@ -11,11 +11,11 @@ protected:
 	int colType;
 	bool m_Destroy;
 	XMFLOAT3* pos;
-	CGameObject* owner;
+	GameObject* owner;
 public:
 	CCollision();
 	virtual ~CCollision();
-	void Attach(CGameObject* owner) { this->owner = owner; }
+	void Attach(GameObject* owner) { this->owner = owner; }
 	virtual void Init(XMFLOAT3* ownerPos) {
 		pos = ownerPos;
 		m_Destroy = false;

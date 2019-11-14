@@ -29,12 +29,12 @@ void CEnemy::Init(void)
 	
 
 	m_Model = new CModel;
-	m_Model->Init("asset/miku_01.obj",m_Position);
+	m_Model->Init("Assets/miku_01.obj",transform.position);
 	m_Model->SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
 	m_Shadow = new CShadow(5.0f);
-	m_Position = { -125 + ((rand() % 500) * 0.5f),0.5f,(rand() % 500) * 0.5f };
+	transform.position = { -125 + ((rand() % 500) * 0.5f),0.5f,(rand() % 500) * 0.5f };
 	m_Col = CManager::GetScene()->AddCollision<CColSphere>();
-	m_Col->Init(&m_Position);
+	m_Col->Init(&transform.position);
 	m_Col->Attach(this);
 	m_Shadow->Init();
 	m_SE_Bomb = new CAudioClip;
@@ -55,10 +55,10 @@ void CEnemy::Update(void)
 
 void CEnemy::Draw(void)
 {
-	if (CManager::GetScene()->GetGameObject<CCamera>(0)->GetVisiblity(m_Position)) {
-		m_Shadow->Draw(m_Position);
+	if (CManager::GetScene()->GetGameObject<CCamera>(0)->GetVisiblity(transform.position)) {
+		m_Shadow->Draw(transform.position);
 
-		m_Model->Draw(m_Position);
+		m_Model->Draw(transform.position);
 
 	}
 }

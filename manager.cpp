@@ -11,7 +11,7 @@
 #include "Scene.h"
 
 CScene* CManager::m_Scene = nullptr;
-static CInput* g_Input;
+static Input* g_Input;
 
 void CManager::Init()
 {
@@ -19,7 +19,7 @@ void CManager::Init()
 	CRenderer::Init();
 	CAudioClip::Init();
 	SetScene<CTitle>();
-	g_Input = new CInput;
+	g_Input = new Input;
 	g_Input->Init();
 	CFade::Init();
 }

@@ -11,8 +11,8 @@
 void CCamera::Init()
 {
 
-	m_Position = XMFLOAT3( 0.0f, 5.0f, -10.0f );
-	m_Rotation = XMFLOAT3( 0.5f, 0.0f, 0.0f );
+	transform.position = XMFLOAT3( 0.0f, 5.0f, -10.0f );
+	transform.rotation = XMFLOAT3( 0.5f, 0.0f, 0.0f );
 
 	worldMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
 
@@ -46,38 +46,38 @@ void CCamera::Uninit()
 void CCamera::Update()
 {
 	
-	if (CInput::GetKeyPress(VK_UP)) {
+	if (Input::GetKeyPress(VK_UP)) {
 		 XMVECTOR delta = XMVector3Normalize(at - eye) * 0.5f;
 		 eye += delta;
 		 at += delta;
 	}
-	if (CInput::GetKeyPress(VK_DOWN)) {
+	if (Input::GetKeyPress(VK_DOWN)) {
 		XMVECTOR delta = XMVector3Normalize(at - eye) * 0.5f;
 		eye -= delta;
 		at -= delta;
 	}
-	if (CInput::GetKeyPress(VK_LEFT)) {
+	if (Input::GetKeyPress(VK_LEFT)) {
 		XMVECTOR delta = XMVector3Cross(XMVector3Normalize(at - eye),up) * 0.5f;
 		eye += delta;
 		at += delta;
 	}
-	if (CInput::GetKeyPress(VK_RIGHT)) {
+	if (Input::GetKeyPress(VK_RIGHT)) {
 		XMVECTOR delta = XMVector3Cross(XMVector3Normalize(at - eye),up) * 0.5f;
 		eye -= delta;
 		at -= delta;
 	}
-	if (CInput::GetKeyPress(VK_UP) && (CInput::GetKeyPress(VK_LSHIFT) || CInput::GetKeyPress(VK_RSHIFT))) {
+	if (Input::GetKeyPress(VK_UP) && (Input::GetKeyPress(VK_LSHIFT) || Input::GetKeyPress(VK_RSHIFT))) {
 		XMVECTOR delta = up * 0.5f;
 		eye += delta;
 		at += delta;
 	}
-	if (CInput::GetKeyPress(VK_DOWN) && (CInput::GetKeyPress(VK_LSHIFT) || CInput::GetKeyPress(VK_RSHIFT))) {
+	if (Input::GetKeyPress(VK_DOWN) && (Input::GetKeyPress(VK_LSHIFT) || Input::GetKeyPress(VK_RSHIFT))) {
 		XMVECTOR delta = up * 0.5f;
 		eye -= delta;
 		at -= delta;
 	}
 
-	if (CInput::GetKeyPress(VK_NUMPAD8)) {
+	if (Input::GetKeyPress(VK_NUMPAD8)) {
 		// カメラ→注視点のベクトルを求める
 		XMVECTOR front = eye - at;
 		front = XMVector3Normalize(front);
@@ -90,7 +90,7 @@ void CCamera::Update()
 		up = XMVector3Cross(front,right);
 		
 	}
-	if (CInput::GetKeyPress(VK_NUMPAD2)) {
+	if (Input::GetKeyPress(VK_NUMPAD2)) {
 		// カメラ→注視点のベクトルを求める
 		XMVECTOR front = eye - at;
 		front = XMVector3Normalize(front);
@@ -103,7 +103,7 @@ void CCamera::Update()
 		up = XMVector3Cross(front, right);
 
 	}
-	if (CInput::GetKeyPress(VK_NUMPAD4)) {
+	if (Input::GetKeyPress(VK_NUMPAD4)) {
 		// カメラ→注視点のベクトルを求める
 		XMVECTOR front = eye - at;
 		front = XMVector3Normalize(front);
@@ -116,7 +116,7 @@ void CCamera::Update()
 	//	up = XMVector3Cross(front, right);
 
 	}
-	if (CInput::GetKeyPress(VK_NUMPAD6)) {
+	if (Input::GetKeyPress(VK_NUMPAD6)) {
 		// カメラ→注視点のベクトルを求める
 		XMVECTOR front = eye - at;
 		front = XMVector3Normalize(front);

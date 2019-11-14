@@ -1,6 +1,6 @@
 #pragma once
 
-class SkyDome :	public CGameObject
+class SkyDome :	public GameObject
 {
 private:
 	ID3D11Buffer* vertexBuffer = nullptr;

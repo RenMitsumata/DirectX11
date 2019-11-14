@@ -11,7 +11,7 @@ class CPolygon;
 class CAudioClip;
 
 
-class CPlayer :	public CGameObject
+class CPlayer :	public GameObject
 {
 private:
 	CModelAnimation* m_Model = NULL;

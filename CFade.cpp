@@ -46,7 +46,7 @@ void CFade::Init()
 	sd.pSysMem = vertex;
 	CRenderer::GetDevice()->CreateBuffer(&bd, &sd, &m_VertexBuffer);
 	texture = new CTexture;
-	texture->Load("asset/WhiteBack.png");
+	texture->Load("Assets/WhiteBack.png");
 	mtx = XMMatrixIdentity();
 
 

@@ -21,7 +21,7 @@
 class CScene
 {
 protected:
-	std::list<CGameObject*> _Objectlist[5];
+	std::list<GameObject*> _Objectlist[5];
 	std::list<CCollision*> _Collisionlist;
 public:
 	
@@ -42,7 +42,7 @@ public:
 	
 	template<typename T>
 	T* GetGameObject(int Layer) {
-		for(CGameObject* object : _Objectlist[Layer]) {
+		for(GameObject* object : _Objectlist[Layer]) {
 			if (typeid(*object) == typeid(T)) {
 				return (T*)object;
 			}
@@ -53,7 +53,7 @@ public:
 	template<typename T>
 	std::vector<T*> GetGameObjects(int Layer) {
 		std::vector<T*> objects;
-		for (CGameObject* object : _Objectlist[Layer]) {
+		for (GameObject* object : _Objectlist[Layer]) {
 			if (typeid(*object) == typeid(T)) {
 				objects.push_back((T*)object);
 			}
@@ -72,7 +72,7 @@ public:
 		}
 		_Collisionlist.clear();
 		for (int i = 0; i < 5; i++) {
-			for (CGameObject* object : _Objectlist[i]) {
+			for (GameObject* object : _Objectlist[i]) {
 				object->Uninit();
 				delete object;
 			}
@@ -105,19 +105,19 @@ public:
 		
 
 		for (int i = 0; i < 5; i++) {
-			for (CGameObject* object : _Objectlist[i]) {
+			for (GameObject* object : _Objectlist[i]) {
 				object->Update();
 			}
 			
-			_Objectlist[i].remove_if([](CGameObject* gameobject) {
-				return gameobject->Destroy();
+			_Objectlist[i].remove_if([](GameObject* gameobject) {
+				return gameobject->GetDestroy();
 			});
 		}
 		
 	}
 	virtual void Draw(void) {
 		for (int i = 0; i < 5; i++) {
-			for (CGameObject* object : _Objectlist[i]) {
+			for (GameObject* object : _Objectlist[i]) {
 				object->Draw();
 				
 			}
@@ -130,7 +130,7 @@ public:
 
 /*
 	for文の新しい書き方(C++ 11以降)
-	(CGameObject* object : _Objectlist)
+	(GameObject* object : _Objectlist)
 	●':'の右側は、コンテナであること(list,vectorなど)
 
 	動き方

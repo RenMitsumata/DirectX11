@@ -28,7 +28,7 @@ Model::~Model()
 
 void Model::Init()
 {
-	//Load("assets/models/ball.fbx");
+	//Load("Assetss/models/ball.fbx");
 
 }
 

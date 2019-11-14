@@ -22,7 +22,7 @@ typedef struct CourceData_Tag {
 	XMFLOAT3 pitchyawroll; //　どれくらい傾いているか
 }CourceData;
 
-class Cource : public CGameObject
+class Cource : public GameObject
 {
 private:
 	int courceLength;		//　コースの長さ

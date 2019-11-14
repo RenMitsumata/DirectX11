@@ -137,11 +137,11 @@ void SkyDome::Init(float radius)
 
 	// ‰æ‘œ‚ðƒ[ƒh‚·‚é
 	texture = new CTexture;
-	texture->Load("asset/space.png");
+	texture->Load("Assets/space.png");
 }
 
 void SkyDome::Draw(void) {
-	XMFLOAT3 playerPos = CManager::GetScene()->GetGameObject<CPlayer>(2)->GetPos();
+	XMFLOAT3 playerPos = CManager::GetScene()->GetGameObject<CPlayer>(2)->GetTransform()->position;
 	XMMATRIX worldMatrix = XMMatrixIdentity();
 	worldMatrix *= XMMatrixTranslation(playerPos.x, playerPos.y, playerPos.z);
 	CRenderer::SetWorldMatrix(&worldMatrix);

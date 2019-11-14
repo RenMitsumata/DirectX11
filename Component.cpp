@@ -9,6 +9,8 @@
 #include "main.h"
 #include "renderer.h"
 #include "Component.h"
+#include "GameObject.h"
+
 
 // Ã“Iƒƒ“ƒo‚ÌÄéŒ¾
 std::list<Component*> Component::_ComponentList[UPDATEPRIORITY_MAX];

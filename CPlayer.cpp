@@ -39,20 +39,20 @@ void CPlayer::Init(void)
 	
 	m_Shadow = new CShadow(5.0f);
 	m_Camera = CManager::GetScene()->AddGameObject<CCamera>(0);
-	m_Position = { 0.0f,0.5f,0.0f };
+	transform.position = { 0.0f,0.5f,0.0f };
 	const XMFLOAT3 startFront = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	front = XMLoadFloat3(&startFront);
 	const XMFLOAT3 startUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	up = XMLoadFloat3(&startUp);
 	//m_Model->Init();
-	m_Model->Load("asset/coaster.fbx");
-	//m_ModelHuman->Load("asset/Human.fbx");
+	m_Model->Load("Assets/coaster.fbx");
+	//m_ModelHuman->Load("Assets/Human.fbx");
 	for (int i = 0; i < 3; i++) {
 		m_ModelHuman[i] = new CModelAnimation();
 	}
-	m_ModelHuman[0]->Load("asset/yakiu.fbx");
-	m_ModelHuman[1]->Load("asset/Jumping.fbx");
-	m_ModelHuman[2]->Load("asset/Walking.fbx");
+	m_ModelHuman[0]->Load("Assets/yakiu.fbx");
+	m_ModelHuman[1]->Load("Assets/Jumping.fbx");
+	m_ModelHuman[2]->Load("Assets/Walking.fbx");
 	m_Shadow->Init(); 
 	skydome = CManager::GetScene()->AddGameObject<SkyDome>(1);
 	skydome->Init(50.0f);
@@ -91,7 +91,7 @@ void CPlayer::Update(void)
 	XMStoreFloat3(&frontPos, front);
 	XMStoreFloat3(&upPos, up);
 	frontPos = frontPos * (-6.0f) + upPos * 2.0f;
-	frontPos = m_Position + frontPos;
+	frontPos = transform.position + frontPos;
 	
 	XMVECTOR curFront = pCource->GetTild(distance);
 	
@@ -105,56 +105,29 @@ void CPlayer::Update(void)
 		tild *= XMMatrixRotationRollPitchYaw(YPR.x, YPR.y, YPR.z);
 		XMVector3TransformNormal(curUp, tild);
 		XMStoreFloat3(&frontPos, curFront * (-6.0f) + curUp * 2.0f);
-		frontPos = m_Position + frontPos;
+		frontPos = transform.position + frontPos;
 		m_Camera->Update(frontPos, curFront, curUp);
 	}
 
 	else m_Camera->Update(frontPos, front, up);
 
 
-	if (CInput::GetKeyPress('W') && m_Rotation.y < 0.3f) {
-		m_Rotation.y += 0.05f;
-	}
-
-	if (CInput::GetKeyPress('S') && m_Rotation.y > -0.3f) {
-		m_Rotation.y -= 0.05f;
-	}	
 	
-	if (CInput::GetKeyPress('A') && m_Rotation.x > -0.95f) {
-		m_Rotation.x -= 0.05f;
-	}
-	
-	if (CInput::GetKeyPress('D') && m_Rotation.x < 0.95f) {
-		m_Rotation.x += 0.05f;
-	}
-	
-	if (CInput::GetKeyPress('P')) {
-		CurrentPose = 0;
-	}
-
-	if (CInput::GetKeyPress('L')) {
-		CurrentPose = 1;
-	}
-
-	if (CInput::GetKeyPress('O')) {
-		CurrentPose = 2;
-	}
-
 	
 	distance += 0.25f;
 	pCource = CManager::GetScene()->GetGameObject<Cource>(1);
-	m_Position = pCource->GetCource(distance);
+	transform.position = pCource->GetCource(distance);
 	XMFLOAT3 upFor;
 	XMStoreFloat3(&upFor,up);
-	m_Position.x += upFor.x;
-	m_Position.y += upFor.y;
-	m_Position.z += upFor.z;
+	transform.position.x += upFor.x;
+	transform.position.y += upFor.y;
+	transform.position.z += upFor.z;
 	
 	
 	XMMATRIX curMat = XMMatrixIdentity();
-	curMat = XMMatrixRotationAxis(up,m_Rotation.x);
+	curMat = XMMatrixRotationAxis(up,transform.rotation.x);
 	XMVECTOR right = XMVector3Cross(front,up);
-	curMat *= XMMatrixRotationAxis(right, m_Rotation.y);
+	curMat *= XMMatrixRotationAxis(right, transform.rotation.y);
 
 	curFront = XMVector3TransformNormal(curFront, curMat);
 	front = curFront;
@@ -164,7 +137,7 @@ void CPlayer::Update(void)
 	}
 
 
-	if (CInput::GetKeyTrigger(VK_SPACE)) {
+	if (Input::GetKeyTrigger(VK_SPACE)) {
 		XMFLOAT3 velocity;
 		XMStoreFloat3(&velocity, front);
 		// ‹@‘Ì‚Ì³–Ê‚ðŽ‚Á‚Ä‚«‚½‚¢
@@ -179,7 +152,7 @@ void CPlayer::Update(void)
 		XMStoreFloat3(&calcPos, vectorFront + front * 2.5f + up * 1.3f);
 		CBullet* bullet = new CBullet;
 		bullet->Init();
-		bullet->Set(this, m_Position + calcPos, velocity * 2.0f);
+		bullet->Set(this, transform.position + calcPos, velocity * 2.0f);
 		_bulletList.push_back(bullet);
 		//CBullet* bullet = new CBullet(this, m_Position + calcPos, velocity * 2.0f);	// m_Position‚É‘å–C‚Ìƒtƒƒ“ƒg‚ð‘«‚·
 		m_SE_Shoot->Play(false);
@@ -199,7 +172,7 @@ void CPlayer::Update(void)
 
 void CPlayer::Draw(void)
 {
-	m_Shadow->Draw(m_Position);
+	m_Shadow->Draw(transform.position);
 	
 	
 	if (pCource == NULL) {
@@ -218,20 +191,20 @@ void CPlayer::Draw(void)
 	XMFLOAT3 curRotate;
 	XMStoreFloat3(&curRotate, front);
 
-	XMMATRIX transform = XMMatrixIdentity();	
-	transform *= XMMatrixRotationNormal(up, m_Rotation.x);
+	XMMATRIX transformMat = XMMatrixIdentity();	
+	transformMat *= XMMatrixRotationNormal(up, transform.rotation.x);
 	XMFLOAT3 YPR = pCource->GetPitchYawRoll(distance);
 	
 	
 	XMMATRIX mat = XMMatrixIdentity();
 	mat *= XMMatrixRotationRollPitchYaw(YPR.x, YPR.y, YPR.z);
 	mat *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
-	mat *= XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
+	mat *= XMMatrixTranslation(transform.position.x, transform.position.y, transform.position.z);
 
 	XMMATRIX humMat = XMMatrixIdentity();
 	//humMat *= XMMatrixRotationRollPitchYaw(YPR.x, YPR.y, YPR.z);
 	//humMat *= XMMatrixScaling(0.01f, 0.01f, 0.01f);
-	humMat *= XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
+	humMat *= XMMatrixTranslation(transform.position.x, transform.position.y, transform.position.z);
 
 
 	//CRenderer::SetWorldMatrix(&mat);

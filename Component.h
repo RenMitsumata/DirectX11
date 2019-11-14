@@ -12,7 +12,6 @@
 // --- インクルードガード --- //
 
 #include <list>
-#include "GameObject.h"
 
 // 前方宣言
 class GameObject;

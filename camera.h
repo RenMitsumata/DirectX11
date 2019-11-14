@@ -2,7 +2,7 @@
 
 #define FOCUS_LENGTH (5)
 
-class CCamera : public CGameObject
+class CCamera : public GameObject
 {
 private:
 	
@@ -12,6 +12,7 @@ private:
 	XMMATRIX worldMatrix;
 	XMFLOAT4X4 viewMatrix;
 	XMFLOAT4X4 projMatrix;
+
 
 	XMVECTOR eye;
 	XMVECTOR at;

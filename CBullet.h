@@ -9,13 +9,13 @@ private:
 	CColSphere* m_Collision;
 	XMFLOAT3 m_Position;
 	XMFLOAT3 m_Velocity;
-	CGameObject* owner;
+	GameObject* owner;
 	int lifetime;
 	bool isKilled;
 public:
 	CBullet();
-	CBullet(CGameObject* owner,XMFLOAT3 pos, XMFLOAT3 velocity);
-	void Set(CGameObject * owner, XMFLOAT3 pos, XMFLOAT3 velocity);
+	CBullet(GameObject* owner,XMFLOAT3 pos, XMFLOAT3 velocity);
+	void Set(GameObject * owner, XMFLOAT3 pos, XMFLOAT3 velocity);
 	virtual ~CBullet();
 	void Init(void);
 	void Uninit(void);

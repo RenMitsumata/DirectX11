@@ -14,20 +14,20 @@ CBullet::CBullet() : isKilled(false)
 {
 }
 
-CBullet::CBullet(CGameObject* owner,XMFLOAT3 pos, XMFLOAT3 velocity)
+CBullet::CBullet(GameObject* owner,XMFLOAT3 pos, XMFLOAT3 velocity)
 {
 	this->owner = owner;
 	m_Velocity = velocity;
 	m_Position = pos;
 }
 
-void CBullet::Set(CGameObject* owner, XMFLOAT3 pos, XMFLOAT3 velocity)
+void CBullet::Set(GameObject* owner, XMFLOAT3 pos, XMFLOAT3 velocity)
 {
 	this->owner = owner;
 	m_Velocity = velocity;
 	m_Position = pos;
 	m_Model = new CModel;
-	m_Model->Init("asset/bullet.obj", m_Position);
+	m_Model->Init("Assets/bullet.obj", m_Position);
 	m_Model->SetScale(XMFLOAT3(0.4f, 0.4f, 0.4f));
 }
 

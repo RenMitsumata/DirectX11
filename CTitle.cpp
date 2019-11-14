@@ -20,13 +20,13 @@ CTitle::~CTitle()
 void CTitle::Init(void)
 {
 	title = AddGameObject<CPolygon>(4);
-	title->Set("asset/titleImage.png");
+	title->Set("Assets/titleImage.png");
 }
 
 void CTitle::Update(void)
 {
 	
-	if (CInput::GetKeyTrigger(VK_SPACE)) {
+	if (Input::GetKeyTrigger(VK_SPACE)) {
 		CFade::Set();
 		isChange = true;
 	}

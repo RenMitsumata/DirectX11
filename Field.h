@@ -1,7 +1,7 @@
 #pragma once
 
 //class CTexture;
-class CField : public CGameObject
+class CField : public GameObject
 {
 private:
 	ID3D11Buffer* m_VertexBuffer = NULL;

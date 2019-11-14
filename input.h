@@ -1,7 +1,7 @@
 #pragma once
 
 
-class CInput
+class Input
 {
 private:
 	static BYTE m_OldKeyState[256];

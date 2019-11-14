@@ -1,5 +1,5 @@
 #pragma once
-class Billboard : public CGameObject
+class Billboard : public GameObject
 {
 private:
 	CTexture* texture;

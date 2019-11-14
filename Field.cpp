@@ -36,16 +36,16 @@ void CField::Init()
 	const int n = SQUARE_NUMBER;
 	static const int vertexNum = 2 * (n + 1) * n + 2 * (n - 1);
 	g_Num = vertexNum;
-	m_Position = XMFLOAT3{ 0.0f,0.0f,0.0f };
+	
 	vertex = new VERTEX_3D[vertexNum];
 	int count = 0;
 	
 	srand(time(NULL));
 
-
+	transform.position = XMFLOAT3{ 0.0f,0.0f,0.0f };
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < (2 * (n + 1)); j++,count++) {
-			vertex[count].Position.x = m_Position.x - (n * 0.5f - (j % 2) - i) * SQUARE_SIZE;
+			vertex[count].Position.x = transform.position.x - (n * 0.5f - (j % 2) - i) * SQUARE_SIZE;
 			//float r = 0.05f * (i % 10);
 			float r = sinf(i) * 0.5f + cosf(j) * 0.3f;
 			//float r = 0.05f * ((rand() % 10) + 1);
@@ -53,9 +53,9 @@ void CField::Init()
 				vertex[count].Position.y = vertex[count - (2 * (n + 1)) - 1].Position.y;
 			}
 			else {
-				vertex[count].Position.y = m_Position.y + r;
+				vertex[count].Position.y = transform.position.y + r;
 			}
-			vertex[count].Position.z = m_Position.z + (n * 0.5f - (j / 2)) * SQUARE_SIZE;
+			vertex[count].Position.z = transform.position.z + (n * 0.5f - (j / 2)) * SQUARE_SIZE;
 			
 			
 			vertex[count].Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -197,10 +197,10 @@ void CField::Init()
 
 	
 	m_Texture = new CTexture;
-	m_Texture->Load("asset/wall.tga");
+	m_Texture->Load("Assets/wall.tga");
 	
 	m_WallTexture = new CTexture;
-	m_WallTexture->Load("asset/wall.tga");
+	m_WallTexture->Load("Assets/wall.tga");
 	
 	
 

@@ -25,7 +25,7 @@ CShadow::~CShadow()
 void CShadow::Init(void)
 {
 	m_Texture = new CTexture;
-	m_Texture->Load("asset/circle_shadow.tga");
+	m_Texture->Load("Assets/circle_shadow.tga");
 	for (int i = 0; i < 4; i++) {
 		vertex[i].Position.x = -(size / 2) + (i % 2) * size;
 		vertex[i].Position.y = 0.1f;
@@ -37,7 +37,7 @@ void CShadow::Init(void)
 	}
 
 	m_Texture = new CTexture;
-	m_Texture->Load("asset/circle_shadow.tga");
+	m_Texture->Load("Assets/circle_shadow.tga");
 
 }
 

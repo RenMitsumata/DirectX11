@@ -36,7 +36,7 @@ void CModel::Init()
 	m_Scale = XMFLOAT3( 1.0f, 1.0f, 1.0f );
 
 
-	Load( "asset/miku_01.obj" );
+	Load( "Assets/miku_01.obj" );
 		
 }
 /*
@@ -693,7 +693,7 @@ void CModel::LoadObj( const char *FileName, MODEL *Model )
 			fscanf( file, "%s", str );
 
 			char path[256];
-			strcpy( path, "asset/" );
+			strcpy( path, "Assets/" );
 			strcat( path, str );
 
 			LoadMaterial( path, &materialArray, &materialNum );
@@ -911,7 +911,7 @@ void CModel::LoadMaterial( const char *FileName, MODEL_MATERIAL **MaterialArray,
 			fscanf( file, "%s", str );
 
 			char path[256];
-			strcpy( path, "asset/" );
+			strcpy( path, "Assets/" );
 			strcat( path, str );
 
 			strcat( materialArray[ mc ].TextureName, path );

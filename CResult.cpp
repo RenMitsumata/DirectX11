@@ -20,12 +20,12 @@ CResult::~CResult()
 void CResult::Init(void)
 {
 	resultImg = AddGameObject<CPolygon>(4);
-	resultImg->Set("asset/clear.png");
+	resultImg->Set("Assets/clear.png");
 }
 
 void CResult::Update(void)
 {
-	if (CInput::GetKeyTrigger(VK_RETURN)) {
+	if (Input::GetKeyTrigger(VK_RETURN)) {
 		CManager::SetScene<CTitle>();
 	}
 }

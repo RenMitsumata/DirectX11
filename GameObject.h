@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Component.h"
+
+#include <vector>
+
 
 struct TRANSFORM {
 	XMFLOAT3 position = { 0.0f,0.0f,0.0f };
@@ -9,21 +13,32 @@ struct TRANSFORM {
 	XMFLOAT3 up = { 0.0f,1.0f,0.0f };
 };
 
-class CGameObject
+class GameObject
 {	
 protected:
-	XMFLOAT3 m_Position;
-	XMFLOAT3 m_Rotation;
-	bool m_Destroy = false;
+	TRANSFORM transform;	// トランスフォーム(必要)
+	XMVECTOR velocity;		// 速度
+	std::vector<Component*> _ComponentList;	// コンポーネント（ベクター型）
+	bool isDestroy;
 public:
-	CGameObject() {};
-	virtual ~CGameObject() {};
-	virtual void Init(void) = 0;
-	virtual void Uninit(void) = 0;
-	virtual void Update(void) = 0;
-	virtual void Draw(void) = 0;
-	void SetDestroy(void) { m_Destroy = true; }
-	bool Destroy(void);
-	XMFLOAT3 GetPos(void) { return m_Position; }
+	template<typename C>
+	C* AddComponent() {
+		C* comp = new C;
+		comp->Init();
+		_ComponentList.push_back(comp);
+		return comp;
+	}
+
+
+	GameObject() : isDestroy(false) {}
+	virtual ~GameObject() {}
+	virtual void Init();
+	virtual void Uninit();
+	virtual void Update();
+	virtual void Draw();
+	void SetDestroy() { isDestroy = true; }
+	bool GetDestroy() { return isDestroy; }
+	TRANSFORM* GetTransform() { return &transform; }
+	void AddVelocity(XMVECTOR force) { velocity += force; }
 };
 

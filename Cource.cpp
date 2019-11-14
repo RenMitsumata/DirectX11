@@ -35,7 +35,7 @@ Cource::~Cource()
 void Cource::Init(void) {
 	//　コース画像読み込み
 	courceImg = new CTexture;
-	courceImg->Load("asset/rainbow.png");
+	courceImg->Load("Assets/rainbow.png");
 	//　コースファイルの読み込み
 	//　コースデータはdistance,yaw,pitch,roll,radius,insline
 	FILE* fp;
